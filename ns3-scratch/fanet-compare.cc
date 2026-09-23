@@ -144,7 +144,7 @@ int main (int argc, char *argv[])
 
     MobilityHelper mobilityHelper;
     if (mobility == "RWP") {
-        double areaSize = 50.0 * std::sqrt ((double)nNodes / 5.0);
+        double areaSize = std::sqrt ((double)nNodes * 962.11 / (3.0 * std::log ((double)nNodes)));
         std::ostringstream xRange, yRange;
         xRange << "ns3::UniformRandomVariable[Min=0.0|Max=" << areaSize << "]";
         yRange << "ns3::UniformRandomVariable[Min=0.0|Max=" << areaSize << "]";
@@ -185,7 +185,7 @@ int main (int argc, char *argv[])
     }
 
     uint16_t port = 9;
-    uint32_t numFlows = nNodes / 2;
+    uint32_t numFlows = (nNodes / 2 < 8) ? (nNodes / 2) : 8;
     for (uint32_t i = 0; i < numFlows; ++i) {
         uint32_t src = i;
         uint32_t dst = i + numFlows;
