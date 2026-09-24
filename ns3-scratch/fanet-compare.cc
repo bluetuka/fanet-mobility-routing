@@ -159,6 +159,40 @@ int main (int argc, char *argv[])
                                          "PositionAllocator", StringValue ("ns3::RandomRectanglePositionAllocator"));
         mobilityHelper.Install (nodes);
     } 
+    else if (mobility == "GridCoverage") {
+        // Coordinated multi-UAV Grid-Coverage mission mobility.
+        // Grounded in Duarte de Souza et al. (IEEE ICAR 2025, DOI
+        // 10.1109/ICAR65334.2025.11338737): each UAV independently runs
+        // a Grid-Coverage boustrophedon sweep (their best-performing CPP
+        // strategy) at the reported cruise speed of 1.33 m/s, one UAV per
+        // horizontal strip of the same connectivity-preserving deployment
+        // area used by RWP/Realistic. Trace files carry one full path per
+        // node (no modulo-reuse); see scripts/generate_gridcoverage_traces.py.
+        //
+        // Added for the LARS 2026 revision (mobility x network-metrics
+        // matrix, per Daniel Bonilla Licea, 2026-09-24). Preliminary --
+        // this is a multi-UAV extension built on top of the single-UAV
+        // Grid Coverage algorithm from Duarte de Souza et al., not yet
+        // validated against their raw trajectory logs.
+        for (uint32_t i = 0; i < nodes.GetN (); ++i) {
+            Ptr<Node> node = nodes.Get (i);
+            Ptr<WaypointMobilityModel> mob = CreateObject<WaypointMobilityModel> ();
+            node->AggregateObject (mob);
+
+            std::string prefix = waypointDir.empty() ? "" : waypointDir + "/";
+            std::string filename = prefix + "node_" + std::to_string (i) + ".trace";
+            std::ifstream file (filename);
+            if (!file.is_open ()) {
+                NS_FATAL_ERROR ("Cannot open file: " << filename);
+            }
+
+            double time, x, y, z;
+            while (file >> time >> x >> y >> z) {
+                mob->AddWaypoint (Waypoint (Seconds (time), Vector (x, y, z)));
+            }
+            file.close ();
+        }
+    }
     else if (mobility == "Realistic") {
         for (uint32_t i = 0; i < nodes.GetN (); ++i) {
             Ptr<Node> node = nodes.Get (i);
