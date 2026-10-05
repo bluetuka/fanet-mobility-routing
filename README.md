@@ -56,3 +56,9 @@ Files:
 - results/lars-revision-2026/mobility_matrix_summary.csv -- mean/std summary across all three mobility models (RWP, Realistic, GridCoverage) side by side
 
 Headline finding (preliminary): at matched node density, GridCoverage mobility produces substantially lower average node degree than RWP or Realistic (e.g. at 20 nodes: 5.56 vs 11.57 vs 12.96), and this changes which routing protocol performs best -- OLSR wins under RWP, AODV takes over under Realistic and GridCoverage, and DSDV degrades most sharply under GridCoverage (PDR dropping to roughly 21-27%). Statistical significance and effect sizes for these differences are large across nearly all protocol/scale combinations (Welch t-test, Mann-Whitney U, Cohen d).
+
+## JPDC 2026 version of the scenario
+
+`ns3-scratch/fanet-compare-jpdc.cc` is the version of the ns-3 scenario used for the JPDC 2026 manuscript (node counts 5-100, three protocols, RWP and Gazebo-derived mobility). It differs from `fanet-compare.cc` (LARS 2026 package) in two ways: (1) traffic flow pairs use a fixed stride (source = (i * stride) mod n, destination = (source + n/2) mod n, with at most 8 flows), and (2) it prints the trajectory loading time (`TRAJ_LOAD_WALL_S`). It does not include the GridCoverage branch.
+
+`results/jpdc2026_results_300runs.csv` contains the 300 runs reported in the manuscript (3 protocols x 2 mobility models x 5 node counts x 10 seeds). The file has no header; columns are: protocol, mobility, nNodes, PDR (%), average delay (ms), tx packets, rx packets, link breaks, average hop count, average node degree, average link lifetime (s).
