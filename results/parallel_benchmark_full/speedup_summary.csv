@@ -1,0 +1,3 @@
+P,runs,failed,makespan_s,speedup,efficiency_pct,mean_run_s,slowdown_vs_P1_per_run
+1,300,0,3940.5,1.00,100.0,13.13,1.00
+6,300,0,726.2,5.43,90.4,14.51,1.11
