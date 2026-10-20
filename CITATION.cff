@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite the associated article."
+title: "Computational Cost of UAV Network Co-Simulation: Scalability, Topology Churn, and Routing Protocol Effects (code and data)"
+type: software
+authors:
+  - family-names: Joshan
+    given-names: Mohammad Sadegh
+  - family-names: Vivaldini
+    given-names: Kelen Cristiane Teixeira
+  - family-names: Bonilla Licea
+    given-names: Daniel
+license: MIT
+repository-code: "https://github.com/bluetuka/fanet-mobility-routing"

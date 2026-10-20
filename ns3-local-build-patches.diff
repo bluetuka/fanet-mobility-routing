@@ -1,0 +1,50 @@
+diff --git a/build-support/custom-modules/ns3-compiler-workarounds.cmake b/build-support/custom-modules/ns3-compiler-workarounds.cmake
+index 45bf80c96..180a8d86f 100644
+--- a/build-support/custom-modules/ns3-compiler-workarounds.cmake
++++ b/build-support/custom-modules/ns3-compiler-workarounds.cmake
+@@ -16,7 +16,7 @@ if(CLANG)
+     LINK_OPTIONS -stdlib=libstdc++
+     CXX_STANDARD 23
+     CXX_STANDARD_REQUIRED TRUE
+-    CXX_EXTENSIONS FALSE
++    CXX_EXTENSIONS TRUE
+   )
+ 
+   try_compile(
+@@ -26,7 +26,7 @@ if(CLANG)
+     LINK_OPTIONS -stdlib=libc++
+     CXX_STANDARD 23
+     CXX_STANDARD_REQUIRED TRUE
+-    CXX_EXTENSIONS FALSE
++    CXX_EXTENSIONS TRUE
+   )
+   if((NOT ${CLANG_STDLIBCPP_WORKS}) AND (NOT ${CLANG_LIBCPP_WORKS}))
+     message(
+diff --git a/build-support/macros-and-definitions.cmake b/build-support/macros-and-definitions.cmake
+index 774ff75dd..7bbe1fe76 100644
+--- a/build-support/macros-and-definitions.cmake
++++ b/build-support/macros-and-definitions.cmake
+@@ -57,7 +57,7 @@ include(ns3-check-dependencies)
+ set(CXX_UNSUPPORTED_STANDARDS 98 11 14 17 20)
+ set(CMAKE_CXX_STANDARD_MINIMUM 23)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+-set(CMAKE_CXX_EXTENSIONS OFF)
++set(CMAKE_CXX_EXTENSIONS ON)
+ 
+ # Include CMake files used for compiler checks
+ include(CheckIncludeFileCXX) # Used to check a single C++ header at a time
+diff --git a/src/core/model/int64x64-128.h b/src/core/model/int64x64-128.h
+index fe582cdf1..f1d469a68 100644
+--- a/src/core/model/int64x64-128.h
++++ b/src/core/model/int64x64-128.h
+@@ -24,8 +24,8 @@
+  * Some compilers do not have this defined, so we define it.
+  * @{
+  */
+-typedef __uint128_t uint128_t;
+-typedef __int128_t int128_t;
++typedef unsigned __int128 uint128_t;
++typedef __int128 int128_t;
+ /** @} */
+ #endif
+ 
