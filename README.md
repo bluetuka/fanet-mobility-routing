@@ -1,14 +1,16 @@
 # Mobility, Routing and Computational Cost in UAV Network Co-Simulation (ns-3)
 
-Reproducibility package for two papers by the same authors. Both use the same ns-3 scenario program, the same routing protocols (AODV, OLSR, DSDV) and the same two mobility sources (Random Waypoint, and trajectories recorded from a ROS 2 / Gazebo UAV simulation).
+Code and data for the study "Computational Cost of UAV Network Co-Simulation: Scalability, Topology Churn, and Routing Protocol Effects" (journal manuscript in preparation; 5 to 100 nodes, 300 runs), and for the earlier study that preceded it:
 
-1. **LARS 2026** - Coupling UAV mobility patterns with routing protocol selection (5, 10 and 20 nodes).
-2. **Computational cost study (2026 journal manuscript, in preparation)** - "Computational Cost of UAV Network Co-Simulation: Scalability, Topology Churn, and Routing Protocol Effects" (5 to 100 nodes, 300 runs).
+1. **Computational cost study (2026)** - the main content of this repository (scenario `fanet-compare-jpdc.cc`, data under `results/jpdc2026_*` and `results/parallel_benchmark_*`).
+2. **Earlier mobility-vs-routing study (5, 10 and 20 nodes)** - prepared for LARS 2026; that submission was not accepted. Its scenario and data are kept for transparency (see the last section).
+
+Both use the same ns-3 scenario program, the same routing protocols (AODV, OLSR, DSDV) and the same two mobility sources (Random Waypoint, and trajectories recorded from a ROS 2 / Gazebo UAV simulation).
 
 ## Repository layout
 
 - `ns3-scratch/fanet-compare-jpdc.cc` - scenario used for the computational cost study (use this one for that paper)
-- `ns3-scratch/fanet-compare.cc` - scenario used for the LARS 2026 paper (includes the preliminary GridCoverage branch)
+- `ns3-scratch/fanet-compare.cc` - scenario of the earlier 5/10/20-node study (includes the preliminary GridCoverage branch)
 - `ns3-local-build-patches.diff` - the three local build patches applied to ns-3 (see "Build")
 - `waypoints/waypoints_independent/` - 5 UAV trajectories recorded from Gazebo
 - `results/` - result tables (column descriptions below)
@@ -50,7 +52,7 @@ IEEE 802.11a, OfdmRate6Mbps; LogDistance propagation (exponent 3.0) plus a 17.5 
 - `results/jpdc2026_results_300runs.csv` - the 300 runs of the cost study. No header. Columns: protocol, mobility, nNodes, PDR (%), average delay (ms), tx packets, rx packets, link breaks, average hop count, average node degree, average link lifetime (s).
 - `results/jpdc2026_timing_300runs.csv` - per-run cost measurements of the cost study. Header: protocol, mobility, nNodes, seed, wallClockSec, peakRssKB, linkBreaks, avgNodeDegree.
 - `results/parallel_benchmark_full/` - run-level parallelism benchmark over the same 300 runs with P = 1 and P = 6 concurrent processes (`per_run_all.csv`: PID, start, end, duration, exit status, peak RSS per run; `batch_summary.csv`; `speedup_summary.csv`). `results/parallel_benchmark_pilot/` is a smaller pilot (60 runs, P = 1, 2, 4, 6).
-- `results/results_n10.csv`, `results/scalability_summary.csv`, `results/lars-revision-2026/` - LARS 2026 data.
+- `results/results_n10.csv`, `results/scalability_summary.csv`, `results/lars-revision-2026/` - data of the earlier 5/10/20-node study.
 
 ## Provenance of the timing numbers (please read)
 
@@ -70,21 +72,21 @@ python3 scripts/make_figures.py --timing results/jpdc2026_timing_300runs.csv \
   --perrun results/parallel_benchmark_full/per_run_all.csv --out figs
 ```
 
-This regenerates Figures 3 (cost vs. nodes, from the Table 1 values embedded in the script), 4 (peak memory) and 5 (cost vs. link breaks). Figure 1 comes from `scripts/figures/make_fig1.py`.
+This writes one vector PDF per panel (fonts embedded, no title inside the image): `Figure_3_wallclock_{Realistic,RWP}.pdf` (cost vs. nodes, from the Table 1 values embedded in the script), `Figure_4_memory_{Realistic,RWP}.pdf` (peak memory) and `Figure_5_breaks_vs_time.pdf` (cost vs. link breaks). Figure 1 comes from `scripts/figures/make_fig1.py`.
 
 ## Citation
 
-See `CITATION.cff`. LARS 2026: M. S. Joshan, D. Bonilla Licea, and K. C. T. Vivaldini, "Coupling UAV Mobility Patterns with Routing Protocol Selection in FANETs: A Co-Simulation Study," in Proc. LARS 2026.
+See `CITATION.cff` and cite the archived version of this repository (Zenodo DOI shown on the release page).
 
 ## License
 
 MIT License (see LICENSE).
 
-## LARS 2026 Revision -- GridCoverage Mobility Model (Preliminary)
+## Earlier study: GridCoverage Mobility Model (Preliminary, LARS 2026 revision)
 
 Added 2026-09-24 in response to Daniel Bonilla Licea proposal to restructure the LARS revision as a mobility x network/communication-metrics matrix, with each mobility model tied to a concrete, named practical scenario rather than a realistic/non-realistic label.
 
-Scope note: everything in this section is for the LARS 2026 revision only. It is NOT part of the cost-study dataset or claims -- the existing RWP and Realistic branches in ns3-scratch/fanet-compare.cc, and the results already in results/results_n10.csv and results/scalability_summary.csv, are unmodified.
+Scope note: everything in this section belongs to the earlier 5/10/20-node study (LARS 2026 revision, not accepted) only. It is NOT part of the cost-study dataset or claims -- the existing RWP and Realistic branches in ns3-scratch/fanet-compare.cc, and the results already in results/results_n10.csv and results/scalability_summary.csv, are unmodified.
 
 Model: a coordinated multi-UAV extension of the single-UAV Grid Coverage algorithm from Duarte de Souza, Pereira, Pazelli and Vivaldini, "Evaluating Coverage Path Planning Strategies for UAVs with Real-Time Obstacle Avoidance in Forested Environments," IEEE ICAR 2025, DOI 10.1109/ICAR65334.2025.11338737. Represents N UAVs performing a coordinated forest/agricultural biomass-mapping survey, each covering one horizontal strip of the same target area with a boustrophedon (lawnmower) sweep, at their reported Grid Coverage cruise speed (1.33 m/s). This multi-UAV extension is our own construction and has not been validated against the authors raw trajectory logs -- treat as preliminary.
 

@@ -10,6 +10,10 @@ Data sources (all measured on the lab machine, 2026-10):
       configurations from the parallel benchmark (benchmark_parallel_full/)
   * Table 1 of the paper         - embedded below (mean +- sd of wall-clock time)
 
+Output: one vector PDF per panel (Figure_3_wallclock_{Realistic,RWP}.pdf,
+Figure_4_memory_{Realistic,RWP}.pdf, Figure_5_breaks_vs_time.pdf), fonts embedded,
+no title inside the image (put the panel titles in the LaTeX subcaptions).
+
 Figure 3: wall-clock time vs n, drawn from the Table 1 values (so the figure and
           the table are identical by construction).
 Figure 4: peak RSS vs n, mean +- sd over 10 seeds, from the 300-run CSV.
@@ -37,7 +41,6 @@ from matplotlib.lines import Line2D
 
 NS = [5, 10, 20, 50, 100]
 STYLE = {"AODV": ("#d62728", "o"), "OLSR": ("#1f77b4", "s"), "DSDV": ("#2ca02c", "^")}
-TITLE = {"Realistic": "Realistic (Gazebo-derived) mobility", "RWP": "Random Waypoint (RWP)"}
 
 # Table 1: (mean, sd) of wall-clock seconds per run, 10 seeds, n = 5,10,20,50,100
 TABLE1 = {
@@ -50,51 +53,60 @@ TABLE1 = {
 }
 
 
-def two_panel():
-    return plt.subplots(1, 2, figsize=(7.2, 3.0), sharey=True, dpi=200)
+matplotlib.rcParams.update({
+    "pdf.fonttype": 42, "ps.fonttype": 42,          # embed fonts (Elsevier: vector, fonts embedded)
+    "font.size": 8, "axes.labelsize": 8, "xtick.labelsize": 7, "ytick.labelsize": 7,
+})
+FIGSIZE = (3.5, 2.7)   # single column (~89 mm); one panel per file, no title inside the image
+MOBS = ["Realistic", "RWP"]
 
 
-def finish(fig, ax, ylabel, logy):
-    """Axis setup is applied AFTER plotting (keeps the autoscaled limits)."""
-    for a, mob in zip(ax, ["Realistic", "RWP"]):
-        a.set_xscale("log")
-        if logy:
-            a.set_yscale("log")
-        a.set_xticks(NS)
-        a.set_xticklabels(NS)
-        a.minorticks_off()
-        a.set_title(TITLE[mob], fontsize=8)
-        a.set_xlabel("Number of UAV nodes ($n$)", fontsize=8)
-        a.grid(alpha=.3, which="both" if logy else "major")
-        a.tick_params(labelsize=7)
-    ax[0].set_ylabel(ylabel, fontsize=8)
-    ax[0].legend(title="Routing protocol", fontsize=7, title_fontsize=7, loc="upper left")
+def setup(ax, ylabel, logy, ylim):
+    ax.set_xscale("log")
+    if logy:
+        ax.set_yscale("log")
+    ax.set_xticks(NS)
+    ax.set_xticklabels(NS)
+    ax.minorticks_off()
+    ax.set_ylim(*ylim)
+    ax.set_xlabel("Number of UAV nodes ($n$)")
+    ax.set_ylabel(ylabel)
+    ax.grid(alpha=.3, which="both" if logy else "major")
+    ax.legend(title="Routing protocol", fontsize=7, title_fontsize=7, loc="upper left")
+
+
+def save(fig, out, name):
     fig.tight_layout()
+    fig.savefig(os.path.join(out, name + ".pdf"))
+    plt.close(fig)
+
+
+def pair(out, stem, series, ylabel, logy):
+    """series[(p, mob)] = (means, sds). Two separate files with identical y-limits."""
+    lo = min(m - e for v in series.values() for m, e in zip(*v))
+    hi = max(m + e for v in series.values() for m, e in zip(*v))
+    ylim = (max(lo * 0.8, 1e-2) if logy else 0, hi * (1.5 if logy else 1.08))
+    for mob in MOBS:
+        fig, ax = plt.subplots(figsize=FIGSIZE)
+        for p, (c, mk) in STYLE.items():
+            y, e = series[(p, mob)]
+            ax.errorbar(NS, y, yerr=e, color=c, marker=mk, ms=4, lw=1.3, capsize=2, label=p)
+        setup(ax, ylabel, logy, ylim)
+        save(fig, out, f"{stem}_{mob}")
 
 
 def fig3(out):
-    fig, ax = two_panel()
-    for a, mob in zip(ax, ["Realistic", "RWP"]):
-        for p, (c, m) in STYLE.items():
-            v = TABLE1[(p, mob)]
-            a.errorbar(NS, [x for x, _ in v], yerr=[e for _, e in v], color=c,
-                       marker=m, ms=4, lw=1.3, capsize=2, label=p)
-    finish(fig, ax, "Wall-clock simulation time (s, log scale)", True)
-    fig.savefig(os.path.join(out, "scalability_wallclock.png"))
+    series = {k: ([x for x, _ in v], [e for _, e in v]) for k, v in TABLE1.items()}
+    pair(out, "Figure_3_wallclock", series, "Wall-clock simulation time (s, log scale)", True)
 
 
 def fig4(rows, out):
     d = collections.defaultdict(list)
     for r in rows:
         d[(int(r["nNodes"]), r["protocol"], r["mobility"])].append(int(r["peakRssKB"]) / 1024)
-    fig, ax = two_panel()
-    for a, mob in zip(ax, ["Realistic", "RWP"]):
-        for p, (c, m) in STYLE.items():
-            y = [st.mean(d[(n, p, mob)]) for n in NS]
-            e = [st.stdev(d[(n, p, mob)]) for n in NS]
-            a.errorbar(NS, y, yerr=e, color=c, marker=m, ms=4, lw=1.3, capsize=2, label=p)
-    finish(fig, ax, "Peak memory (MB)", False)
-    fig.savefig(os.path.join(out, "scalability_memory.png"))
+    series = {(p, mob): ([st.mean(d[(n, p, mob)]) for n in NS], [st.stdev(d[(n, p, mob)]) for n in NS])
+              for p in STYLE for mob in MOBS}
+    pair(out, "Figure_4_memory", series, "Peak memory (MB)", False)
 
 
 def fig5(rows, perrun_path, out):
@@ -107,7 +119,7 @@ def fig5(rows, perrun_path, out):
         k = (r["protocol"], r["mobility"], int(r["nNodes"]), int(r["seed"]))
         pts.append((k[0], k[1], breaks[k] + 1, float(r["duration_s"])))
     assert len(pts) == 300, f"expected 300 P=1 runs, got {len(pts)}"
-    fig, a = plt.subplots(figsize=(3.6, 3.2), dpi=200)
+    fig, a = plt.subplots(figsize=FIGSIZE)
     for p, (c, _) in STYLE.items():
         for mob, mk in [("Realistic", "o"), ("RWP", "^")]:
             xs = [x for q, m, x, y in pts if q == p and m == mob]
@@ -116,16 +128,13 @@ def fig5(rows, perrun_path, out):
     a.set_xscale("log")
     a.set_yscale("log")
     a.grid(alpha=.3, which="both")
-    a.tick_params(labelsize=7)
-    a.set_xlabel("Link breaks per run (topology churn, log scale; +1 offset)", fontsize=7)
-    a.set_ylabel("Wall-clock simulation time (s, log scale)", fontsize=7)
-    a.set_title("Simulation cost vs. topology churn, by routing protocol", fontsize=8)
+    a.set_xlabel("Link breaks per run (log scale; +1 offset)")
+    a.set_ylabel("Wall-clock simulation time (s, log scale)")
     h = [Line2D([], [], marker="o", ls="", color=c, label=p) for p, (c, _) in STYLE.items()]
     h += [Line2D([], [], marker="o", ls="", color="gray", label="Realistic"),
           Line2D([], [], marker="^", ls="", color="gray", label="RWP")]
     a.legend(handles=h, fontsize=6, loc="lower right")
-    fig.tight_layout()
-    fig.savefig(os.path.join(out, "scalability_breaks_vs_time.png"))
+    save(fig, out, "Figure_5_breaks_vs_time")
 
 
 def main():
@@ -140,7 +149,7 @@ def main():
     fig3(a.out)
     fig4(rows, a.out)
     fig5(rows, a.perrun, a.out)
-    print("wrote 3 figures to", a.out)
+    print("wrote 5 vector PDFs (Figures 3-5) to", a.out)
 
 
 if __name__ == "__main__":
