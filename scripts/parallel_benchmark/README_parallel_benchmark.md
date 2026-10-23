@@ -1,5 +1,11 @@
 # Run-level parallelism benchmark (JPDC 2026)
 
+v1.1 (Oct 2026): the manuscript numbers come from `run_all_parallel_simpat.sh`, which calls
+`run_parallel_benchmark_simpat.sh` (same as `run_parallel_benchmark.sh` except that the scenario is
+`$SCENARIO`, default `fanet-compare-simpat`, the corrected RWP program). Results are in
+`results/parallel_benchmark_{full,pilot}_simpat/`. `run_parallel_benchmark.sh` is the v1.0 script
+(hard-coded `fanet-compare`, RWP bug) and is kept for transparency.
+
 Measures wall-clock makespan of the same independent ns-3 runs executed with at most
 P = 1, 2, 4, 6 concurrent processes. Does not modify the simulation, the seeds or any
 existing result. Each ns-3 process stays single-threaded (run-level parallelism only).

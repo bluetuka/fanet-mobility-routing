@@ -3,12 +3,14 @@
 "Computational Cost of UAV Network Co-Simulation: Scalability, Topology Churn,
 and Routing Protocol Effects".
 
-Data sources (all measured on the lab machine, 2026-10):
-  * jpdc2026_timing_300runs.csv  - per-run peak RSS and link breaks (300 runs)
-      columns: protocol,mobility,nNodes,seed,wallClockSec,peakRssKB,linkBreaks,avgNodeDegree
-  * per_run_all.csv              - sequential (P=1) re-run of the same 300
-      configurations from the parallel benchmark (benchmark_parallel_full/)
-  * Table 1 of the paper         - embedded below (mean +- sd of wall-clock time)
+Data sources (version 1.1, Oct 2026; all measured on the lab machine):
+  * simpat_rerun_2026-10/timing_simpat_300runs.csv - per-run wall-clock time, peak RSS,
+      link breaks and node degree of the 300 runs (fanet-compare-simpat, binary timed directly)
+      columns: protocol,mobility,nNodes,seed,wallClockSec,peakRssKB,cpuPct,exitStatus,
+               linkBreaks,avgNodeDegree,pdr
+  * (optional) parallel_benchmark_full_simpat/per_run_all.csv - sequential (P=1) re-run of
+      the same 300 configurations from the parallel benchmark
+  * Table 1 of the paper - embedded below (mean +- sd of wall-clock time)
 
 Output: one vector PDF per panel (Figure_3_wallclock_{Realistic,RWP}.pdf,
 Figure_4_memory_{Realistic,RWP}.pdf, Figure_5_breaks_vs_time.pdf), fonts embedded,
@@ -17,16 +19,14 @@ no title inside the image (put the panel titles in the LaTeX subcaptions).
 Figure 3: wall-clock time vs n, drawn from the Table 1 values (so the figure and
           the table are identical by construction).
 Figure 4: peak RSS vs n, mean +- sd over 10 seeds, from the 300-run CSV.
-Figure 5: wall-clock time (P=1 re-run) vs link breaks per run (300-run CSV),
-          joined on (protocol, mobility, n, seed).
+Figure 5: wall-clock time vs link breaks per run, both from the 300-run CSV
+          (optionally, with --perrun, the P=1 benchmark durations instead).
 
-Note: the wall-clock column of jpdc2026_timing_300runs.csv is NOT used for the
-paper figures: for n=5 and n=10 under realistic mobility it contains values from
-an earlier, load-affected re-run that do not match Table 1.
+Version 1.0 used results/jpdc2026_timing_300runs.csv, which was produced with the
+RWP generator bug described in the README; do not use it for the RWP condition.
 
 Usage:
-  python3 make_figures.py --timing jpdc2026_timing_300runs.csv \
-                          --perrun per_run_all.csv --out figs/
+  python3 make_figures.py --timing results/simpat_rerun_2026-10/timing_simpat_300runs.csv --out figs/
 """
 import argparse
 import csv
@@ -43,13 +43,15 @@ NS = [5, 10, 20, 50, 100]
 STYLE = {"AODV": ("#d62728", "o"), "OLSR": ("#1f77b4", "s"), "DSDV": ("#2ca02c", "^")}
 
 # Table 1: (mean, sd) of wall-clock seconds per run, 10 seeds, n = 5,10,20,50,100
+# Version 1.1 (Oct 2026): computed from results/simpat_rerun_2026-10/timing_simpat_300runs.csv
+# (fanet-compare-simpat, binary timed directly; values rounded half-up to 2 decimals).
 TABLE1 = {
-    ("AODV", "RWP"):       [(0.58, .05), (1.42, .13), (4.50, .75), (24.03, 5.79), (71.47, 9.61)],
-    ("AODV", "Realistic"): [(0.62, .04), (1.31, .09), (4.61, .75), (28.28, 2.94), (73.83, 8.17)],
-    ("OLSR", "RWP"):       [(0.56, .05), (1.30, .12), (3.09, .41), (9.24, .76),  (24.84, 1.51)],
-    ("OLSR", "Realistic"): [(0.59, .04), (1.15, .09), (2.98, .28), (9.36, .90),  (17.43, 1.38)],
-    ("DSDV", "RWP"):       [(0.56, .04), (1.34, .16), (3.72, .79), (11.82, 1.20), (47.72, 2.57)],
-    ("DSDV", "Realistic"): [(0.61, .04), (1.15, .07), (2.93, .34), (12.15, 1.31), (35.14, 2.51)],
+    ("AODV", "RWP"):       [(0.48, .08), (1.49, .31), (5.32, 1.09), (22.45, 3.10), (85.03, 14.86)],
+    ("AODV", "Realistic"): [(0.57, .07), (1.11, .11), (4.31, .68), (26.79, 2.62), (69.85, 7.30)],
+    ("OLSR", "RWP"):       [(0.43, .09), (1.19, .24), (2.78, .37), (8.09, 1.03),  (25.69, 2.99)],
+    ("OLSR", "Realistic"): [(0.44, .09), (1.02, .08), (2.81, .27), (8.96, .84),   (16.89, 1.32)],
+    ("DSDV", "RWP"):       [(0.45, .09), (1.12, .23), (2.98, .48), (10.12, .47),  (43.64, 2.07)],
+    ("DSDV", "Realistic"): [(0.52, .09), (1.06, .08), (2.74, .27), (11.53, 1.21), (32.95, 2.24)],
 }
 
 
@@ -110,15 +112,23 @@ def fig4(rows, out):
 
 
 def fig5(rows, perrun_path, out):
+    """x = link breaks per run (+1), y = wall-clock time per run.
+    By default y is wallClockSec of the 300-run CSV (the values behind Table 1, as stated
+    in the paper's caption). With --perrun, y is the sequential (P=1) duration from the
+    parallel benchmark instead (version 1.0 behaviour)."""
     breaks = {(r["protocol"], r["mobility"], int(r["nNodes"]), int(r["seed"])): int(r["linkBreaks"])
               for r in rows}
     pts = []
-    for r in csv.DictReader(open(perrun_path)):
-        if r["P"] != "1":
-            continue
-        k = (r["protocol"], r["mobility"], int(r["nNodes"]), int(r["seed"]))
-        pts.append((k[0], k[1], breaks[k] + 1, float(r["duration_s"])))
-    assert len(pts) == 300, f"expected 300 P=1 runs, got {len(pts)}"
+    if perrun_path:
+        for r in csv.DictReader(open(perrun_path)):
+            if r["P"] != "1":
+                continue
+            k = (r["protocol"], r["mobility"], int(r["nNodes"]), int(r["seed"]))
+            pts.append((k[0], k[1], breaks[k] + 1, float(r["duration_s"])))
+    else:
+        for r in rows:
+            pts.append((r["protocol"], r["mobility"], int(r["linkBreaks"]) + 1, float(r["wallClockSec"])))
+    assert len(pts) == 300, f"expected 300 runs, got {len(pts)}"
     fig, a = plt.subplots(figsize=FIGSIZE)
     for p, (c, _) in STYLE.items():
         for mob, mk in [("Realistic", "o"), ("RWP", "^")]:
@@ -140,7 +150,8 @@ def fig5(rows, perrun_path, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--timing", required=True)
-    ap.add_argument("--perrun", required=True)
+    ap.add_argument("--perrun", default=None,
+                    help="optional: use P=1 benchmark durations for Figure 5 instead of wallClockSec")
     ap.add_argument("--out", default="figs")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
